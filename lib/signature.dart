@@ -286,6 +286,15 @@ class SignatureData {
 
   /// stack-like list that use to save points when user undo the signature
   final List<List<Point>> revertedActions;
+
+  /// Deep copy of the current state of the controller
+  SignatureData deepCopy() {
+    return SignatureData(
+      points: <Point>[...points],
+      latestActions: <List<Point>>[...latestActions],
+      revertedActions: <List<Point>>[...revertedActions],
+    );
+  }
 }
 
 /// class for interaction with signature widget
