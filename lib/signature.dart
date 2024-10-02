@@ -286,6 +286,8 @@ class SignatureController extends ValueNotifier<List<Point>> {
     this.onDrawStart,
     this.onDrawMove,
     this.onDrawEnd,
+    this.latestActions = const <List<Point>>[],
+    this.revertedActions = const <List<Point>>[],
   }) : super(points ?? <Point>[]);
 
   /// If set to true canvas writting will be disabled.
@@ -322,21 +324,15 @@ class SignatureController extends ValueNotifier<List<Point>> {
   List<Point> get points => value;
 
   /// stack-like list of point to save user's latest action
-  final List<List<Point>> _latestActions = <List<Point>>[];
+  final List<List<Point>> latestActions;
 
   /// stack-like list that use to save points when user undo the signature
-  final List<List<Point>> _revertedActions = <List<Point>>[];
+  final List<List<Point>> revertedActions;
 
   /// setter for points representing signature on 2D canvas
   set points(List<Point> points) {
     value = points;
   }
-
-  /// Getter for latest actions
-  List<List<Point>> get latestActions => _latestActions;
-
-  /// Getter for reverted actions
-  List<List<Point>> get revertedActions => _revertedActions;
 
   /// add point to point collection
   void addPoint(Point point) {
@@ -346,10 +342,10 @@ class SignatureController extends ValueNotifier<List<Point>> {
 
   /// REMEMBERS CURRENT CANVAS STATE IN UNDO STACK
   void pushCurrentStateToUndoStack() {
-    _latestActions.add(<Point>[...points]);
+    latestActions.add(<Point>[...points]);
     //CLEAR ANY UNDO-ED ACTIONS. IF USER UNDO-ED ANYTHING HE ALREADY MADE
     // ANOTHER CHANGE AND LEFT THAT OLD PATH.
-    _revertedActions.clear();
+    revertedActions.clear();
   }
 
   /// check if canvas is empty (opposite of isNotEmpty method for convenience)
@@ -405,20 +401,20 @@ class SignatureController extends ValueNotifier<List<Point>> {
   /// Clear the canvas
   void clear() {
     value = <Point>[];
-    _latestActions.clear();
-    _revertedActions.clear();
+    latestActions.clear();
+    revertedActions.clear();
   }
 
-  /// It will remove last action from [_latestActions].
-  /// The last action will be saved to [_revertedActions]
+  /// It will remove last action from [latestActions].
+  /// The last action will be saved to [revertedActions]
   /// that will be used to do redo-ing.
   /// Then, it will modify the real points with the last action.
   void undo() {
-    if (_latestActions.isNotEmpty) {
-      final List<Point> lastAction = _latestActions.removeLast();
-      _revertedActions.add(<Point>[...lastAction]);
-      if (_latestActions.isNotEmpty) {
-        points = <Point>[..._latestActions.last];
+    if (latestActions.isNotEmpty) {
+      final List<Point> lastAction = latestActions.removeLast();
+      revertedActions.add(<Point>[...lastAction]);
+      if (latestActions.isNotEmpty) {
+        points = <Point>[...latestActions.last];
         return;
       }
       points = <Point>[];
@@ -426,12 +422,12 @@ class SignatureController extends ValueNotifier<List<Point>> {
     }
   }
 
-  /// It will remove last reverted actions and add it into [_latestActions]
+  /// It will remove last reverted actions and add it into [latestActions]
   /// Then, it will modify the real points with the last reverted action.
   void redo() {
-    if (_revertedActions.isNotEmpty) {
-      final List<Point> lastRevertedAction = _revertedActions.removeLast();
-      _latestActions.add(<Point>[...lastRevertedAction]);
+    if (revertedActions.isNotEmpty) {
+      final List<Point> lastRevertedAction = revertedActions.removeLast();
+      latestActions.add(<Point>[...lastRevertedAction]);
       points = <Point>[...lastRevertedAction];
       notifyListeners();
       return;
@@ -584,7 +580,7 @@ class SignatureController extends ValueNotifier<List<Point>> {
     String formatPoint(Point p) =>
         '${p.offset.dx.toStringAsFixed(2)},${p.offset.dy.toStringAsFixed(2)}';
 
-    final List<String> latestActionList = List<List<Point>>.from(_latestActions)
+    final List<String> latestActionList = List<List<Point>>.from(latestActions)
         .map((List<Point> value) {
           return _translatePoints(value)!.map(formatPoint).join(' ');
         })
