@@ -305,10 +305,10 @@ class SignatureController extends ValueNotifier<List<Point>> {
     this.onDrawStart,
     this.onDrawMove,
     this.onDrawEnd,
-    List<List<Point>> latestActions = const <List<Point>>[],
-    List<List<Point>> revertedActions = const <List<Point>>[],
-  })  : _revertedActions = revertedActions,
-        _latestActions = latestActions,
+    List<List<Point>>? latestActions,
+    List<List<Point>>? revertedActions,
+  })  : _revertedActions = revertedActions ?? <List<Point>>[],
+        _latestActions = latestActions ?? <List<Point>>[],
         super(points ?? <Point>[]);
 
   /// If set to true canvas writting will be disabled.
