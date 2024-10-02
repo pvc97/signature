@@ -332,6 +332,12 @@ class SignatureController extends ValueNotifier<List<Point>> {
     value = points;
   }
 
+  /// Getter for latest actions
+  List<List<Point>> get latestActions => _latestActions;
+
+  /// Getter for reverted actions
+  List<List<Point>> get revertedActions => _revertedActions;
+
   /// add point to point collection
   void addPoint(Point point) {
     value.add(point);
