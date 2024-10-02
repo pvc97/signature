@@ -269,6 +269,25 @@ class _SignaturePainter extends CustomPainter {
   bool shouldRepaint(CustomPainter other) => true;
 }
 
+/// Data of SignatureController
+class SignatureData {
+  /// constructor
+  const SignatureData({
+    required this.points,
+    required this.latestActions,
+    required this.revertedActions,
+  });
+
+  /// getter for points representing signature on 2D canvas
+  final List<Point> points;
+
+  /// stack-like list of point to save user's latest action
+  final List<List<Point>> latestActions;
+
+  /// stack-like list that use to save points when user undo the signature
+  final List<List<Point>> revertedActions;
+}
+
 /// class for interaction with signature widget
 /// manages points representing signature on canvas
 /// provides signature manipulation functions (export, clear)
@@ -286,9 +305,11 @@ class SignatureController extends ValueNotifier<List<Point>> {
     this.onDrawStart,
     this.onDrawMove,
     this.onDrawEnd,
-    this.latestActions = const <List<Point>>[],
-    this.revertedActions = const <List<Point>>[],
-  }) : super(points ?? <Point>[]);
+    List<List<Point>> latestActions = const <List<Point>>[],
+    List<List<Point>> revertedActions = const <List<Point>>[],
+  })  : _revertedActions = revertedActions,
+        _latestActions = latestActions,
+        super(points ?? <Point>[]);
 
   /// If set to true canvas writting will be disabled.
   bool disabled;
@@ -324,10 +345,10 @@ class SignatureController extends ValueNotifier<List<Point>> {
   List<Point> get points => value;
 
   /// stack-like list of point to save user's latest action
-  final List<List<Point>> latestActions;
+  final List<List<Point>> _latestActions;
 
   /// stack-like list that use to save points when user undo the signature
-  final List<List<Point>> revertedActions;
+  final List<List<Point>> _revertedActions;
 
   /// setter for points representing signature on 2D canvas
   set points(List<Point> points) {
@@ -340,12 +361,21 @@ class SignatureController extends ValueNotifier<List<Point>> {
     notifyListeners();
   }
 
+  /// Deep copy of the current state of the controller
+  SignatureData get data {
+    return SignatureData(
+      points: <Point>[...points],
+      latestActions: <List<Point>>[..._latestActions],
+      revertedActions: <List<Point>>[..._revertedActions],
+    );
+  }
+
   /// REMEMBERS CURRENT CANVAS STATE IN UNDO STACK
   void pushCurrentStateToUndoStack() {
-    latestActions.add(<Point>[...points]);
+    _latestActions.add(<Point>[...points]);
     //CLEAR ANY UNDO-ED ACTIONS. IF USER UNDO-ED ANYTHING HE ALREADY MADE
     // ANOTHER CHANGE AND LEFT THAT OLD PATH.
-    revertedActions.clear();
+    _revertedActions.clear();
   }
 
   /// check if canvas is empty (opposite of isNotEmpty method for convenience)
@@ -401,20 +431,20 @@ class SignatureController extends ValueNotifier<List<Point>> {
   /// Clear the canvas
   void clear() {
     value = <Point>[];
-    latestActions.clear();
-    revertedActions.clear();
+    _latestActions.clear();
+    _revertedActions.clear();
   }
 
-  /// It will remove last action from [latestActions].
-  /// The last action will be saved to [revertedActions]
+  /// It will remove last action from [_latestActions].
+  /// The last action will be saved to [_revertedActions]
   /// that will be used to do redo-ing.
   /// Then, it will modify the real points with the last action.
   void undo() {
-    if (latestActions.isNotEmpty) {
-      final List<Point> lastAction = latestActions.removeLast();
-      revertedActions.add(<Point>[...lastAction]);
-      if (latestActions.isNotEmpty) {
-        points = <Point>[...latestActions.last];
+    if (_latestActions.isNotEmpty) {
+      final List<Point> lastAction = _latestActions.removeLast();
+      _revertedActions.add(<Point>[...lastAction]);
+      if (_latestActions.isNotEmpty) {
+        points = <Point>[..._latestActions.last];
         return;
       }
       points = <Point>[];
@@ -422,12 +452,12 @@ class SignatureController extends ValueNotifier<List<Point>> {
     }
   }
 
-  /// It will remove last reverted actions and add it into [latestActions]
+  /// It will remove last reverted actions and add it into [_latestActions]
   /// Then, it will modify the real points with the last reverted action.
   void redo() {
-    if (revertedActions.isNotEmpty) {
-      final List<Point> lastRevertedAction = revertedActions.removeLast();
-      latestActions.add(<Point>[...lastRevertedAction]);
+    if (_revertedActions.isNotEmpty) {
+      final List<Point> lastRevertedAction = _revertedActions.removeLast();
+      _latestActions.add(<Point>[...lastRevertedAction]);
       points = <Point>[...lastRevertedAction];
       notifyListeners();
       return;
@@ -580,7 +610,7 @@ class SignatureController extends ValueNotifier<List<Point>> {
     String formatPoint(Point p) =>
         '${p.offset.dx.toStringAsFixed(2)},${p.offset.dy.toStringAsFixed(2)}';
 
-    final List<String> latestActionList = List<List<Point>>.from(latestActions)
+    final List<String> latestActionList = List<List<Point>>.from(_latestActions)
         .map((List<Point> value) {
           return _translatePoints(value)!.map(formatPoint).join(' ');
         })
